@@ -1,0 +1,24 @@
+# Raw data - never commit these
+data/*.csv
+data/*.idat
+data/*.zip
+data/*.tar.gz
+data/*.tsv
+
+# R specific
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Large output files
+results/*.csv
+results/*.rds
+
+# Mac system files
+.DS_Store
+
+# Sensitive credentials - never commit these!
+*.env
+*credentials*
+*password*
