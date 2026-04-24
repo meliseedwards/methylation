@@ -22,8 +22,18 @@ DOC_DIR     <- file.path(PPMI_DIR, "documentation")
 
 # Key metadata files
 LINK_LIST   <- file.path(DOC_DIR, "ppmi_140_link_list_20210607.csv")
-RACE_FILE   <- file.path(META_DIR, 
-                "Race_and_Ethnicity__Online_-ret_23Apr2026.csv")
+RACE_FILE   <- file.path(META_DIR, "Race_and_Ethnicity__Online_-ret_23Apr2026.csv")
+PARTICIPANT_STATUS <- file.path(META_DIR, "subject_characteristics/Participant_Status_23Apr2026.csv")
+DEMOGRAPHICS       <- file.path(META_DIR, "subject_characteristics/Demographics_23Apr2026.csv")
+AGE_AT_VISIT       <- file.path(META_DIR, "subject_characteristics/Age_at_visit_23Apr2026.csv")
+
+# --- Cohort definitions ------------------------------------------------------
+# COHORT 1 = Parkinson's Disease
+# COHORT 2 = Healthy Control  
+# COHORT 3 = SWEDD (Scans Without Evidence of Dopaminergic Deficit)
+# COHORT 4 = Prodromal (at risk)
+
+COHORTS_OF_INTEREST <- c(1, 2)  # PD vs Healthy Control
 
 # --- Analysis parameters -----------------------------------------------------
 

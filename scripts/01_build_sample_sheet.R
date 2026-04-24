@@ -31,7 +31,7 @@ baseline <- link_list %>%
   filter(EVENT_ID == PRIMARY_TIMEPOINT)
 cat("Baseline samples:", nrow(baseline), "\n")
 
-# --- 3. Merge with race/ethnicity metadata -----------------------------------
+# --- 3a. Merge with race/ethnicity metadata -----------------------------------
 
 cat("\nMerging with race/ethnicity data...\n")
 sample_sheet <- baseline %>%
@@ -44,14 +44,84 @@ cat("Sample sheet after merge:", nrow(sample_sheet), "rows\n")
 cat("Samples missing race/ethnicity data:", 
     sum(is.na(sample_sheet$RAWHITE_OL)), "\n")
 
-# --- 4. Construct Basename column --------------------------------------------
+# --- 3b. Merge with participant status (diagnosis) ---------------------------
 
-cat("\nConstructing Basename paths...\n")
+cat("\nLoading participant status (diagnosis)...\n")
+participant_status <- read.csv(PARTICIPANT_STATUS,
+                               colClasses = c(PATNO = "character")) %>%
+  select(PATNO, COHORT, COHORT_DEFINITION, ENROLL_AGE, ENROLL_STATUS,
+         ENRLGBA, ENRLLRRK2, ENRLSNCA)
+
+cat("Participant status dimensions:", nrow(participant_status), "rows\n")
+cat("Cohort breakdown:\n")
+print(table(participant_status$COHORT_DEFINITION))
+
+# Merge with sample sheet
 sample_sheet <- sample_sheet %>%
+  left_join(participant_status, by = "PATNO")
+
+# Filter to PD and Healthy Control only
+sample_sheet <- sample_sheet %>%
+  filter(COHORT %in% COHORTS_OF_INTEREST)
+
+cat("Samples after filtering to PD + HC:", nrow(sample_sheet), "\n")
+cat("PD:", sum(sample_sheet$COHORT == 1), "\n")
+cat("HC:", sum(sample_sheet$COHORT == 2), "\n")
+
+# --- 3c. Merge with demographics (sex) --------------------------------------
+
+cat("\nLoading demographics (sex)...\n")
+demographics <- read.csv(DEMOGRAPHICS,
+                          colClasses = c(PATNO = "character")) %>%
+  filter(EVENT_ID == "SC") %>%  # Screening visit has baseline demographics
+  select(PATNO, SEX, BIRTHDT) %>%
+  distinct(PATNO, .keep_all = TRUE)
+
+sample_sheet <- sample_sheet %>%
+  left_join(demographics, by = "PATNO")
+
+cat("Sex breakdown:\n")
+print(table(sample_sheet$SEX, useNA = "always"))
+
+# --- 4. Map SENTRIXID to actual directory paths ------------------------------
+
+cat("\nMapping SENTRIXID to actual directory paths...\n")
+
+# Find all directories recursively and extract their names
+all_dirs <- list.dirs(IDAT_DIR, recursive = TRUE, full.names = TRUE)
+
+# Build a lookup table: SENTRIXID -> full path
+sentrix_map <- tibble(
+  full_path = all_dirs,
+  SENTRIXID = basename(all_dirs)
+) %>%
+  filter(SENTRIXID %in% baseline$SENTRIXID)
+
+cat("Found", nrow(sentrix_map), "matching SENTRIXID directories\n")
+
+# Check for any SENTRIXIDs in our sample sheet not found on disk
+missing_sentrix <- baseline %>%
+  filter(!SENTRIXID %in% sentrix_map$SENTRIXID) %>%
+  pull(SENTRIXID) %>%
+  unique()
+
+if (length(missing_sentrix) > 0) {
+  cat("WARNING:", length(missing_sentrix), 
+      "SENTRIXIDs from link list not found on disk:\n")
+  print(missing_sentrix)
+} else {
+  cat("All SENTRIXIDs found on disk!\n")
+}
+
+# Join sentrix_map to sample_sheet and construct Basename
+sample_sheet <- sample_sheet %>%
+  left_join(sentrix_map, by = "SENTRIXID") %>%
   mutate(
-    Basename = file.path(IDAT_DIR, SENTRIXID, 
-                         paste0(SENTRIXID, "_", POSITION))
-  )
+    Basename = file.path(full_path, paste0(SENTRIXID, "_", POSITION))
+  ) %>%
+  select(-full_path)
+
+cat("Basename example:", sample_sheet$Basename[1], "\n")
 
 # --- 5. Verify idat files exist ----------------------------------------------
 
