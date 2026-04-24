@@ -1,0 +1,36 @@
+# =============================================================================
+# Shared configuration for PPMI Project 140 methylation pipeline
+# Author: Melise Edwards
+# Date: April 23, 2026
+# Description: Defines shared paths and parameters used across all scripts
+# =============================================================================
+
+# --- Paths -------------------------------------------------------------------
+
+# Root data directory
+PPMI_DIR    <- "/mnt/output/data/ppmi"
+
+# Project 140 directories
+P140_DIR    <- file.path(PPMI_DIR, "project_140")
+RAW_DIR     <- file.path(P140_DIR, "raw")
+IDAT_DIR    <- file.path(P140_DIR, "idat")
+RESULTS_DIR <- file.path(P140_DIR, "results")
+META_DIR    <- file.path(P140_DIR, "metadata")
+
+# Documentation/shared metadata
+DOC_DIR     <- file.path(PPMI_DIR, "documentation")
+
+# Key metadata files
+LINK_LIST   <- file.path(DOC_DIR, "ppmi_140_link_list_20210607.csv")
+RACE_FILE   <- file.path(META_DIR, 
+                "Race_and_Ethnicity__Online_-ret_23Apr2026.csv")
+
+# --- Analysis parameters -----------------------------------------------------
+
+# Timepoint to use for primary analysis
+PRIMARY_TIMEPOINT <- "BL"  # Baseline only
+
+# QC thresholds
+DETECTION_P_THRESHOLD <- 0.01   # Max detection p-value
+MIN_BEADS             <- 3      # Minimum beads per probe
+FAILED_SAMPLE_CUTOFF  <- 0.1    # Max fraction of failed probes per sample (ChAMP default)
