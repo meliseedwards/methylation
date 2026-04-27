@@ -21,14 +21,14 @@ cat("Link list dimensions:", nrow(link_list), "rows x", ncol(link_list), "cols\n
 cat("Timepoints available:", paste(unique(link_list$EVENT_ID), collapse = ", "), "\n")
 
 cat("\nLoading race/ethnicity data...\n")
-race_data <- read.csv(RACE_FILE)
+race_data <- read.csv(RACE_FILE, colClasses = c(PATNO = "character"))
 cat("Race/ethnicity dimensions:", nrow(race_data), "rows x", ncol(race_data), "cols\n")
 
 # --- 2. Filter to baseline samples -------------------------------------------
 
 cat("\nFiltering to baseline (BL) samples...\n")
 baseline <- link_list %>%
-  filter(EVENT_ID == PRIMARY_TIMEPOINT)
+  filter(EVENT_ID == "BL") # baseline only
 cat("Baseline samples:", nrow(baseline), "\n")
 
 # --- 3a. Merge with race/ethnicity metadata -----------------------------------
@@ -64,6 +64,9 @@ sample_sheet <- sample_sheet %>%
 sample_sheet <- sample_sheet %>%
   filter(COHORT %in% COHORTS_OF_INTEREST)
 
+sample_sheet <- sample_sheet %>%
+  mutate(DIAGNOSIS = ifelse(COHORT == 1, "PD", "HC"))
+
 cat("Samples after filtering to PD + HC:", nrow(sample_sheet), "\n")
 cat("PD:", sum(sample_sheet$COHORT == 1), "\n")
 cat("HC:", sum(sample_sheet$COHORT == 2), "\n")
@@ -73,15 +76,23 @@ cat("HC:", sum(sample_sheet$COHORT == 2), "\n")
 cat("\nLoading demographics (sex)...\n")
 demographics <- read.csv(DEMOGRAPHICS,
                           colClasses = c(PATNO = "character")) %>%
-  filter(EVENT_ID == "SC") %>%  # Screening visit has baseline demographics
+  filter(EVENT_ID %in% c("SC", "TRANS")) %>%
+  arrange(PATNO, EVENT_ID) %>% # SC before TRANS alphabetically, so SC kept by distinct()
   select(PATNO, SEX, BIRTHDT) %>%
   distinct(PATNO, .keep_all = TRUE)
 
 sample_sheet <- sample_sheet %>%
   left_join(demographics, by = "PATNO")
 
+sample_sheet <- sample_sheet %>%
+  mutate(SEX_LABEL = case_when(
+    SEX == 0 ~ "Female",
+    SEX == 1 ~ "Male",
+    TRUE ~ "Unknown"
+  ))
+
 cat("Sex breakdown:\n")
-print(table(sample_sheet$SEX, useNA = "always"))
+print(table(sample_sheet$SEX_LABEL, useNA = "always"))
 
 # --- 4. Map SENTRIXID to actual directory paths ------------------------------
 
@@ -93,14 +104,14 @@ all_dirs <- list.dirs(IDAT_DIR, recursive = TRUE, full.names = TRUE)
 # Build a lookup table: SENTRIXID -> full path
 sentrix_map <- tibble(
   full_path = all_dirs,
-  SENTRIXID = basename(all_dirs)
-) %>%
-  filter(SENTRIXID %in% baseline$SENTRIXID)
+  SENTRIXID = basename(all_dirs)) %>% 
+  filter(SENTRIXID %in% sample_sheet$SENTRIXID) %>%
+  distinct(SENTRIXID, .keep_all = TRUE)
 
 cat("Found", nrow(sentrix_map), "matching SENTRIXID directories\n")
 
 # Check for any SENTRIXIDs in our sample sheet not found on disk
-missing_sentrix <- baseline %>%
+missing_sentrix <- sample_sheet %>%
   filter(!SENTRIXID %in% sentrix_map$SENTRIXID) %>%
   pull(SENTRIXID) %>%
   unique()
@@ -155,6 +166,5 @@ cat("\nFinal sample sheet:", nrow(sample_sheet_final), "samples ready for QC\n")
 
 # --- 7. Save sample sheet ----------------------------------------------------
 
-output_file <- file.path(RESULTS_DIR, "sample_sheet_baseline.csv")
-write.csv(sample_sheet_final, output_file, row.names = FALSE)
-cat("Sample sheet saved to:", output_file, "\n")
+write.csv(sample_sheet_final, SAMPLE_SHEET_BASELINE, row.names = FALSE)
+cat("Sample sheet saved to:", SAMPLE_SHEET_BASELINE, "\n")
