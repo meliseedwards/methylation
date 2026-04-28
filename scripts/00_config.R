@@ -23,7 +23,6 @@ DOC_DIR     <- file.path(PPMI_DIR, "documentation")
 
 # Key metadata files
 LINK_LIST          <- file.path(DOC_DIR, "ppmi_140_link_list_20210607.csv")
-RACE_FILE          <- file.path(SUBJ_DIR, "Race_and_Ethnicity__Online_-ret_23Apr2026.csv")
 PARTICIPANT_STATUS <- file.path(SUBJ_DIR, "Participant_Status_23Apr2026.csv")
 DEMOGRAPHICS       <- file.path(SUBJ_DIR, "Demographics_23Apr2026.csv")
 AGE_AT_VISIT       <- file.path(SUBJ_DIR, "Age_at_visit_23Apr2026.csv")

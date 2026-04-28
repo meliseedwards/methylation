@@ -20,10 +20,6 @@ link_list <- read.csv(LINK_LIST, colClasses = c(SENTRIXID = "character", PATNO =
 cat("Link list dimensions:", nrow(link_list), "rows x", ncol(link_list), "cols\n")
 cat("Timepoints available:", paste(unique(link_list$EVENT_ID), collapse = ", "), "\n")
 
-cat("\nLoading race/ethnicity data...\n")
-race_data <- read.csv(RACE_FILE, colClasses = c(PATNO = "character"))
-cat("Race/ethnicity dimensions:", nrow(race_data), "rows x", ncol(race_data), "cols\n")
-
 # --- 2. Filter to baseline samples -------------------------------------------
 
 cat("\nFiltering to baseline (BL) samples...\n")
@@ -31,22 +27,9 @@ baseline <- link_list %>%
   filter(EVENT_ID == "BL") # baseline only
 cat("Baseline samples:", nrow(baseline), "\n")
 
-# --- 3a. Merge with race/ethnicity metadata -----------------------------------
+# --- 3. Merge with participant status (diagnosis) ---------------------------
 
-cat("\nMerging with race/ethnicity data...\n")
-sample_sheet <- baseline %>%
-  left_join(race_data %>% select(PATNO, HISPLAT_OL, RAASIAN_OL, 
-                                  RABLACK_OL, RAHAWOPI_OL, RAWHITE_OL,
-                                  RAINDALS_OL, AFICBERB_OL, ASHKJEW_OL),
-            by = "PATNO")
-
-cat("Sample sheet after merge:", nrow(sample_sheet), "rows\n")
-cat("Samples missing race/ethnicity data:", 
-    sum(is.na(sample_sheet$RAWHITE_OL)), "\n")
-
-# --- 3b. Merge with participant status (diagnosis) ---------------------------
-
-cat("\nLoading participant status (diagnosis)...\n")
+cat("\nLoading participant status...\n")
 participant_status <- read.csv(PARTICIPANT_STATUS,
                                colClasses = c(PATNO = "character")) %>%
   select(PATNO, COHORT, COHORT_DEFINITION, ENROLL_AGE, ENROLL_STATUS,
@@ -56,11 +39,11 @@ cat("Participant status dimensions:", nrow(participant_status), "rows\n")
 cat("Cohort breakdown:\n")
 print(table(participant_status$COHORT_DEFINITION))
 
-# Merge with sample sheet
-sample_sheet <- sample_sheet %>%
+# Merge baseline with participant status to create sample_sheet
+sample_sheet <- baseline %>%
   left_join(participant_status, by = "PATNO")
 
-# Filter to PD and Healthy Control only
+# Filter to PD (1) and Healthy Control (2) only
 sample_sheet <- sample_sheet %>%
   filter(COHORT %in% COHORTS_OF_INTEREST)
 
@@ -71,14 +54,16 @@ cat("Samples after filtering to PD + HC:", nrow(sample_sheet), "\n")
 cat("PD:", sum(sample_sheet$COHORT == 1), "\n")
 cat("HC:", sum(sample_sheet$COHORT == 2), "\n")
 
-# --- 3c. Merge with demographics (sex) --------------------------------------
+# --- 4. Merge with demographics (sex and race/ethnicity) -------------------
 
-cat("\nLoading demographics (sex)...\n")
+cat("\nLoading demographics (sex and race/ethnicity)...\n")
 demographics <- read.csv(DEMOGRAPHICS,
                           colClasses = c(PATNO = "character")) %>%
   filter(EVENT_ID %in% c("SC", "TRANS")) %>%
   arrange(PATNO, EVENT_ID) %>% # SC before TRANS alphabetically, so SC kept by distinct()
-  select(PATNO, SEX, BIRTHDT) %>%
+  select(PATNO, SEX, BIRTHDT,
+         HISPLAT, RAASIAN, RABLACK, RAHAWOPI,
+         RAINDALS, RAWHITE, RAUNKNOWN, AFICBERB, ASHKJEW) %>%
   distinct(PATNO, .keep_all = TRUE)
 
 sample_sheet <- sample_sheet %>%
@@ -93,8 +78,10 @@ sample_sheet <- sample_sheet %>%
 
 cat("Sex breakdown:\n")
 print(table(sample_sheet$SEX_LABEL, useNA = "always"))
+cat("Samples missing race/ethnicity data:", 
+    sum(is.na(sample_sheet$RAWHITE)), "\n")
 
-# --- 4. Map SENTRIXID to actual directory paths ------------------------------
+# --- 5. Map SENTRIXID to actual directory paths ------------------------------
 
 cat("\nMapping SENTRIXID to actual directory paths...\n")
 
@@ -134,7 +121,7 @@ sample_sheet <- sample_sheet %>%
 
 cat("Basename example:", sample_sheet$Basename[1], "\n")
 
-# --- 5. Verify idat files exist ----------------------------------------------
+# --- 6. Verify idat files exist ----------------------------------------------
 
 cat("\nVerifying idat files exist on disk...\n")
 sample_sheet <- sample_sheet %>%
@@ -155,7 +142,7 @@ if (nrow(missing) > 0) {
   cat("All idat files found!\n")
 }
 
-# --- 6. Final clean sample sheet ---------------------------------------------
+# --- 7. Final clean sample sheet ---------------------------------------------
 
 # Keep only samples with both idat files
 sample_sheet_final <- sample_sheet %>%
@@ -164,7 +151,7 @@ sample_sheet_final <- sample_sheet %>%
 
 cat("\nFinal sample sheet:", nrow(sample_sheet_final), "samples ready for QC\n")
 
-# --- 7. Save sample sheet ----------------------------------------------------
+# --- 8. Save sample sheet ----------------------------------------------------
 
 write.csv(sample_sheet_final, SAMPLE_SHEET_BASELINE, row.names = FALSE)
 cat("Sample sheet saved to:", SAMPLE_SHEET_BASELINE, "\n")
