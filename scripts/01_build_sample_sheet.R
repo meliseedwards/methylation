@@ -27,6 +27,16 @@ baseline <- link_list %>%
   filter(EVENT_ID == "BL") # baseline only
 cat("Baseline samples:", nrow(baseline), "\n")
 
+# Flag duplicate PATNOs for downstream review
+duplicate_patnos <- baseline %>%
+  dplyr::group_by(PATNO) %>%
+  dplyr::summarise(n = n()) %>%
+  dplyr::filter(n > 1) %>%
+  dplyr::pull(PATNO)
+
+cat("PATNOs with multiple baseline entries (flagged for review):", 
+    paste(duplicate_patnos, collapse = ", "), "\n")
+
 # --- 3. Merge with participant status (diagnosis) ---------------------------
 
 cat("\nLoading participant status...\n")
