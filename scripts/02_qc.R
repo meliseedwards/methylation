@@ -5,7 +5,6 @@
 # Description: Reads idat files into minfi, runs QC following the minfi
 #              user guide, filters failed samples and probes, normalizes
 #              using preprocessFunnorm, and saves QC-passed data
-# Reference: https://www.bioconductor.org/packages/release/bioc/vignettes/minfi/inst/doc/minfi.html
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -39,7 +38,7 @@ rgSet <- read.metharray.exp(targets = targets,
                         verbose   = TRUE,
                         force     = TRUE)
 
-# Verify metadata attached correctly (inspection only)
+# Verify metadata attached correctly 
 cat("RGChannelSet dimensions:", dim(rgSet), "\n")
 cat("Array type:", annotation(rgSet)["array"], "\n")
 cat("Sample metadata columns:", ncol(pData(rgSet)), "\n")

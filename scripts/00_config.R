@@ -51,3 +51,7 @@ FAILED_SAMPLE_CUTOFF  <- 0.1    # Max fraction of failed probes per sample (ChAM
 SAMPLE_SHEET_BASELINE <- file.path(RESULTS_DIR, "sample_sheet_baseline.csv")
 SAMPLE_SHEET_QC       <- file.path(RESULTS_DIR, "sample_sheet_qc_passed.csv")
 MSET_QC               <- file.path(RESULTS_DIR, "mSetSq_qc_passed.rds")
+
+# Batch variable derivation note
+# Batch is derived from idat folder name in Basename path
+# e.g. /mnt/output/.../idat/20190604_plate1/SENTRIXID/... -> batch = "20190604_plate1"

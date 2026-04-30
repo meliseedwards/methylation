@@ -33,4 +33,7 @@ BiocManager::install("preprocessCore",
                      force = TRUE)
 ```
 
-This is a known issue with `preprocessCore` in conda R environments on Linux. The reinstallation only needs to be done once per environment.
+## Batch variable derivation note
+
+### Batch is derived from idat folder name in Basename path
+### e.g. /mnt/output/.../idat/20190604_plate1/SENTRIXID/... -> batch = "20190604_plate1"
