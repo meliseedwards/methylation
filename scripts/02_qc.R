@@ -125,7 +125,24 @@ if (sum(sex_check$sex_discordant, na.rm = TRUE) > 0) {
 
 # Plot sex prediction
 pdf(file.path(RESULTS_DIR, "qc_03_sex_prediction.pdf"))
-plotSex(sex_predicted)
+plot(sex_predicted$xMed, sex_predicted$yMed,
+     col  = ifelse(sex_predicted$predictedSex == "F", "hotpink", "steelblue"),
+     pch  = 16,
+     xlab = "X chromosome median intensity",
+     ylab = "Y chromosome median intensity",
+     main = "Sex Prediction")
+# Add text labels for discordant samples
+discordant_idx <- sex_check$sex_discordant
+text(sex_predicted$xMed[discordant_idx], 
+     sex_predicted$yMed[discordant_idx],
+     labels = sex_check$PATNO[discordant_idx],
+     pos    = 3,
+     cex    = 0.7,
+     col    = "red")
+legend("topright", 
+       legend = c("Female", "Male", "Discordant"),
+       col    = c("hotpink", "steelblue", "red"), 
+       pch    = c(16, 16, 16))
 dev.off()
 cat("Sex prediction plot saved\n")
 
