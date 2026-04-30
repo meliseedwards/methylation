@@ -99,7 +99,7 @@ if (sum(failed_samples) > 0) {
 # 3c. Sex prediction
 cat("\nPredicting sex from methylation data...\n")
 mSet_mapped   <- mapToGenome(mSet)
-sex_predicted <- getSex(mSet_mapped)
+sex_predicted <- getSex(mSet_mapped, cutoff = -2)
 
 # Compare predicted vs reported sex (PPMI: 0=Female, 1=Male)
 sex_check <- data.frame(
