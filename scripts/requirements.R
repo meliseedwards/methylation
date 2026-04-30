@@ -16,3 +16,8 @@ BiocManager::install(c(
     "limma",
     "bumphunter"
 ), ask = FALSE)
+
+# Install preprocessCore without threading (required for Linux/GCP environments)
+BiocManager::install("preprocessCore",
+                     configure.args = "--disable-threading",
+                     force = TRUE)

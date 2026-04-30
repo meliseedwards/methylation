@@ -19,3 +19,18 @@ conda env create -f environment.yml
 conda activate methylation
 Rscript scripts/requirements.R
 ```
+
+## Troubleshooting
+
+### preprocessFunnorm pthread_create error on Linux/GCP VMs
+
+If you encounter this error during normalization:
+
+Reinstall `preprocessCore` with threading disabled:
+```r
+BiocManager::install("preprocessCore", 
+                     configure.args = "--disable-threading",
+                     force = TRUE)
+```
+
+This is a known issue with `preprocessCore` in conda R environments on Linux. The reinstallation only needs to be done once per environment.
