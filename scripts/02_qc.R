@@ -132,7 +132,7 @@ plot(sex_predicted$xMed, sex_predicted$yMed,
      ylab = "Y chromosome median intensity",
      main = "Sex Prediction")
 # Add text labels for discordant samples
-discordant_idx <- sex_check$sex_discordant
+discordant_idx <- !is.na(sex_check$sex_discordant) & sex_check$sex_discordant
 text(sex_predicted$xMed[discordant_idx], 
      sex_predicted$yMed[discordant_idx],
      labels = sex_check$PATNO[discordant_idx],
