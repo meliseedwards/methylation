@@ -22,20 +22,46 @@ cat("Timepoints available:", paste(unique(link_list$EVENT_ID), collapse = ", "),
 
 # --- 2. Filter to baseline samples -------------------------------------------
 
+
+# 2a. Filter to baseline samples only (EVENT_ID == "BL")
 cat("\nFiltering to baseline (BL) samples...\n")
 baseline <- link_list %>%
   filter(EVENT_ID == "BL") # baseline only
 cat("Baseline samples:", nrow(baseline), "\n")
 
-# Flag duplicate PATNOs for downstream review
-duplicate_patnos <- baseline %>%
+# 2b. Remove duplicates, keep most recent technical replicate 
+cat("\nChecking for duplicate baseline PATNOs...\n")
+
+# Identify duplicates
+duplicate_counts <- baseline %>%
   dplyr::group_by(PATNO) %>%
   dplyr::summarise(n = n()) %>%
-  dplyr::filter(n > 1) %>%
+  dplyr::filter(n > 1)
+
+cat("PATNOs with multiple baseline entries:", nrow(duplicate_counts), "\n")
+print(duplicate_counts)
+
+# Remove batch QC control samples (>2 baseline entries)
+# 40532, 40535, 40536 are likely batch QC controls
+batch_controls <- duplicate_counts %>%
+  dplyr::filter(n > 2) %>%
   dplyr::pull(PATNO)
 
-cat("PATNOs with multiple baseline entries (flagged for review):", 
-    paste(duplicate_patnos, collapse = ", "), "\n")
+cat("Removing batch QC controls:", paste(batch_controls, collapse = ", "), "\n")
+baseline <- baseline %>%
+  filter(!PATNO %in% batch_controls)
+
+# For technical replicates (n=2), keep most recent SENTRIXID
+# SENTRIXID is an Illumina chip barcode assigned sequentially
+# Higher SENTRIXID number = more recent Illumina chip manufacture
+baseline <- baseline %>%
+  group_by(PATNO) %>%
+  arrange(desc(SENTRIXID)) %>%  # most recent first
+  slice(1) %>%                  # keep first row per PATNO
+  ungroup()
+
+cat("Baseline samples after deduplication:", nrow(baseline), "\n")
+cat("Unique PATNOs:", length(unique(baseline$PATNO)), "\n")
 
 # --- 3. Merge with participant status (diagnosis) ---------------------------
 
@@ -70,7 +96,7 @@ cat("\nLoading demographics (sex and race/ethnicity)...\n")
 demographics <- read.csv(DEMOGRAPHICS,
                           colClasses = c(PATNO = "character")) %>%
   filter(EVENT_ID %in% c("SC", "TRANS")) %>%
-  arrange(PATNO, EVENT_ID) %>% # SC before TRANS alphabetically, so SC kept by distinct()
+  arrange(PATNO, EVENT_ID) %>% 
   select(PATNO, SEX, BIRTHDT,
          HISPLAT, RAASIAN, RABLACK, RAHAWOPI,
          RAINDALS, RAWHITE, RAUNKNOWN, AFICBERB, ASHKJEW) %>%

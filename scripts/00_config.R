@@ -1,5 +1,5 @@
 # =============================================================================
-# Shared configuration for PPMI Project 140 methylation pipeline
+# Configuration for PPMI Project_140 methylation pipeline
 # Author: Melise Edwards
 # Date: April 23, 2026
 # Description: Defines shared paths and parameters used across all scripts

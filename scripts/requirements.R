@@ -21,3 +21,7 @@ BiocManager::install(c(
 BiocManager::install("preprocessCore",
                      configure.args = "--disable-threading",
                      force = TRUE)
+
+# Install maxprobes from GitHub for cross-reactive probe removal
+if (!require("devtools")) install.packages("devtools")
+devtools::install_github("markgene/maxprobes")

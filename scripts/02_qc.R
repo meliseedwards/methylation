@@ -12,6 +12,7 @@
 library(minfi)
 library(tidyverse)
 library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+library(maxprobes)
 
 # Load shared configuration
 source("~/methylation/scripts/00_config.R")
@@ -26,10 +27,14 @@ targets <- read.csv(SAMPLE_SHEET_BASELINE,
                     colClasses = c(SENTRIXID = "character",
                                    PATNO     = "character",
                                    Basename  = "character")) 
-
+# Quick checks
 cat("Samples loaded:", nrow(targets), "\n")
 cat("PD:", sum(targets$COHORT == 1), "\n")
 cat("HC:", sum(targets$COHORT == 2), "\n")
+cat("Female:", sum(targets$SEX == 0), "\n")
+cat("Male:", sum(targets$SEX == 1), "\n")
+cat("\nSex by Diagnosis breakdown:\n")
+print(table(targets$DIAGNOSIS, targets$SEX_LABEL))
 
 # --- 2. Read IDAT files ------------------------------------------------------
 
@@ -64,6 +69,14 @@ cat("QC plot saved\n")
 cat("Computing detection p-values...\n")
 detP <- detectionP(rgSet)
 
+# Following minfi handbook: compute fraction of failed probes per sample
+failed <- detP > DETECTION_P_THRESHOLD
+cat("Fraction of failed probes per sample:\n")
+print(round(colMeans(failed), 4))
+cat("Probes failed in >50% of samples:", 
+    sum(rowMeans(failed) > 0.5), "\n")
+
+# Mean detection p-value per sample for plotting and sample-level QC
 mean_detP <- colMeans(detP)
 cat("Mean detection p-value range:",
     round(min(mean_detP), 6), "to", round(max(mean_detP), 6), "\n")
@@ -160,7 +173,7 @@ targets_clean <- targets[!samples_to_remove, ]
 
 cat("\nNormalizing with preprocessFunnorm...\n")
 
-# Density plot BEFORE normalization (fix 2: use getBeta(preprocessRaw()))
+# Density plot BEFORE normalization
 pdf(file.path(RESULTS_DIR, "qc_04_density_before_normalization.pdf"))
 densityPlot(getBeta(preprocessRaw(rgSet_clean)),
             sampGroups = targets_clean$DIAGNOSIS,
@@ -186,24 +199,45 @@ cat("Density plots saved\n")
 cat("\nFiltering probes...\n")
 n_probes_start <- nrow(mSetSq)
 
-# Ensure detP rows match mSetSq probe order after normalization
-detP_clean <- detP_clean[match(featureNames(mSetSq), rownames(detP_clean)), ]
+# 6a. Remove probes with low bead count 
+cat("Removing low bead count probes...\n")
+nbeads <- getNBeads(rgSet_clean)
+# Remove probes with < MIN_BEADS beads in > 5% of samples
+low_bead_probes <- rowSums(nbeads < MIN_BEADS) > (0.05 * ncol(nbeads))
+# Only filter probes that exist in mSetSq
+low_bead_probes <- names(low_bead_probes)[low_bead_probes]
+mSetSq <- mSetSq[!rownames(mSetSq) %in% low_bead_probes, ]
+n_after_beads <- nrow(mSetSq)
+cat("Probes removed (low bead count):", 
+    n_probes_start - n_after_beads, "\n")
 
-# 6a. Remove failed probes
+# 6b. Remove cross-reactive probes
+cat("Removing cross-reactive probes...\n")
+n_before_xreact <- nrow(mSetSq)
+cross_reactive <- maxprobes::xreactive_probes(array_type = "EPIC")
+mSetSq <- mSetSq[!rownames(mSetSq) %in% cross_reactive, ]
+n_after_xreact <- nrow(mSetSq)
+cat("Probes removed (cross-reactive):", 
+    n_before_xreact - n_after_xreact, "\n")
+
+# 6c. Remove failed probes
 cat("Removing failed probes...\n")
+# Ensure detP matches current mSetSq probes after bead/xreact filtering
+detP_clean <- detP_clean[rownames(detP_clean) %in% rownames(mSetSq), ]
+detP_clean <- detP_clean[match(rownames(mSetSq), rownames(detP_clean)), ]
 failed_probes <- rowSums(detP_clean > DETECTION_P_THRESHOLD) >
                  (FAILED_SAMPLE_CUTOFF * ncol(detP_clean))
 mSetSq <- mSetSq[!failed_probes, ]
-n_after_failed <- nrow(mSetSq)  # fix 3: track counts progressively
+n_after_failed <- nrow(mSetSq)
 cat("Probes removed (failed detection):", sum(failed_probes), "\n")
 
-# 6b. Remove SNP-overlapping probes
+# 6d. Remove SNP-overlapping probes
 cat("Removing SNP-overlapping probes...\n")
 mSetSq <- dropLociWithSnps(mSetSq)
 n_after_snp <- nrow(mSetSq)  # fix 3
 cat("Probes removed (SNP-overlapping):", n_after_failed - n_after_snp, "\n")
 
-# 6c. Remove sex chromosome probes
+# 6e. Remove sex chromosome probes
 cat("Removing sex chromosome probes...\n")
 ann_epic   <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 sex_probes <- ann_epic$Name[ann_epic$chr %in% c("chrX", "chrY")]
@@ -225,7 +259,7 @@ bVals <- getBeta(mSetSq)
 cat("M values dimensions:", dim(mVals), "\n")
 cat("Beta values dimensions:", dim(bVals), "\n")
 
-# Save as RDS (more efficient than CSV for large matrices)
+# Save as RDS 
 saveRDS(mVals, file.path(RESULTS_DIR, "mVals.rds"))
 saveRDS(bVals, file.path(RESULTS_DIR, "bVals.rds"))
 cat("M and Beta values saved\n")
@@ -240,14 +274,20 @@ write.csv(targets_clean, SAMPLE_SHEET_QC, row.names = FALSE)
 qc_summary <- data.frame(
   step = c("Input samples", "Failed detection p-value",
             "Sex discordant", "Final samples",
-            "Input probes", "Failed probes removed",
-            "SNP probes removed", "Sex chromosome probes removed",
+            "Input probes",
+            "Low bead count probes removed",
+            "Cross-reactive probes removed",
+            "Failed probes removed",
+            "SNP probes removed",
+            "Sex chromosome probes removed",
             "Final probes"),
   n    = c(nrow(targets), sum(failed_samples),
             sum(sex_check$sex_discordant, na.rm = TRUE),
             nrow(targets_clean),
             n_probes_start,
-            n_probes_start - n_after_failed,
+            n_probes_start - n_after_beads,
+            n_before_xreact - n_after_xreact,
+            n_after_xreact - n_after_failed,
             n_after_failed - n_after_snp,
             n_after_snp - n_after_sex,
             n_after_sex)
