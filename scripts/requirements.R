@@ -9,6 +9,7 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install(c(
     "minfi",
+    "minfiData",
     "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
     "IlluminaHumanMethylationEPICmanifest",
     "DMRcate",
@@ -21,6 +22,8 @@ BiocManager::install("preprocessCore",
                      configure.args = "--disable-threading",
                      force = TRUE)
 
-# Install maxprobes from GitHub for cross-reactive probe removal
-if (!require("devtools")) install.packages("devtools")
-devtools::install_github("markgene/maxprobes")
+# CRAN packages
+install.packages("remotes")
+
+# GitHub package for cross-reactive probe removal - depends on minfiData
+remotes::install_github("markgene/maxprobes")
