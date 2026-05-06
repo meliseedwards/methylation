@@ -1,6 +1,6 @@
 # =============================================================================
 # Quality Control for PPMI Project 140 Methylation Data
-# Author: Melise Edwards
+# Author: GP2 Subtypes and Mechanisms - M.E.
 # Date: April 29, 2026
 # Description: Reads idat files into minfi, runs QC following the minfi
 #              user guide, filters failed samples and probes, normalizes
@@ -41,7 +41,8 @@ print(table(targets$DIAGNOSIS, targets$SEX_LABEL))
 cat("\nReading IDAT files into minfi...\n")
 rgSet <- read.metharray.exp(targets = targets,
                         verbose   = TRUE,
-                        force     = TRUE)
+                        force     = TRUE, 
+                        extended = TRUE)
 
 # Verify metadata attached correctly 
 cat("RGChannelSet dimensions:", dim(rgSet), "\n")
@@ -69,7 +70,7 @@ cat("QC plot saved\n")
 cat("Computing detection p-values...\n")
 detP <- detectionP(rgSet)
 
-# Following minfi handbook: compute fraction of failed probes per sample
+# compute fraction of failed probes per sample
 failed <- detP > DETECTION_P_THRESHOLD
 cat("Fraction of failed probes per sample:\n")
 print(round(colMeans(failed), 4))
@@ -234,7 +235,7 @@ cat("Probes removed (failed detection):", sum(failed_probes), "\n")
 # 6d. Remove SNP-overlapping probes
 cat("Removing SNP-overlapping probes...\n")
 mSetSq <- dropLociWithSnps(mSetSq)
-n_after_snp <- nrow(mSetSq)  # fix 3
+n_after_snp <- nrow(mSetSq)  
 cat("Probes removed (SNP-overlapping):", n_after_failed - n_after_snp, "\n")
 
 # 6e. Remove sex chromosome probes
@@ -242,7 +243,7 @@ cat("Removing sex chromosome probes...\n")
 ann_epic   <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 sex_probes <- ann_epic$Name[ann_epic$chr %in% c("chrX", "chrY")]
 mSetSq     <- mSetSq[!rownames(mSetSq) %in% sex_probes, ]
-n_after_sex <- nrow(mSetSq)  # fix 3
+n_after_sex <- nrow(mSetSq)  
 cat("Probes removed (sex chromosomes):", n_after_snp - n_after_sex, "\n")
 
 cat("Total probes removed:", n_probes_start - n_after_sex, "\n")

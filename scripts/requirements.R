@@ -1,8 +1,7 @@
 # =============================================================================
 # requirements.R - R/Bioconductor packages not managed by conda
-# Author: Melise Edwards
+# Author: GP2 Subtypes and Mechanisms - M.E.
 # Date: April 2026
-# Usage: Rscript requirements.R
 # =============================================================================
 
 if (!require("BiocManager", quietly = TRUE))

@@ -1,6 +1,6 @@
 # =============================================================================
 # Configuration for PPMI Project_140 methylation pipeline
-# Author: Melise Edwards
+# Author: GP2 Subtypes and Mechanisms - M.E.
 # Date: April 23, 2026
 # Description: Defines shared paths and parameters used across all scripts
 # =============================================================================

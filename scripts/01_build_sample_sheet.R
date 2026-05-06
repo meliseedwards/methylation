@@ -1,6 +1,6 @@
 # =============================================================================
 # Building the sample sheet for PPMI Project 140
-# Author: Melise Edwards
+# Author: GP2 Subtypes and Mechanisms - M.E.
 # Date: April 23, 2026
 # Description: Merges link list with race/ethnicity metadata, constructs
 #              Basename column for minfi, and filters to baseline samples
@@ -42,7 +42,7 @@ cat("PATNOs with multiple baseline entries:", nrow(duplicate_counts), "\n")
 print(duplicate_counts)
 
 # Remove batch QC control samples (>2 baseline entries)
-# 40532, 40535, 40536 are likely batch QC controls
+# 40532, 40535, 40536 are likely batch QC controls or longitudinal samples with mislabeled timepoints
 batch_controls <- duplicate_counts %>%
   dplyr::filter(n > 2) %>%
   dplyr::pull(PATNO)
@@ -52,8 +52,7 @@ baseline <- baseline %>%
   filter(!PATNO %in% batch_controls)
 
 # For technical replicates (n=2), keep most recent SENTRIXID
-# SENTRIXID is an Illumina chip barcode assigned sequentially
-# Higher SENTRIXID number = more recent Illumina chip manufacture
+# SENTRIXID assigned sequentially; higher SENTRIXID number = more recent chip
 baseline <- baseline %>%
   group_by(PATNO) %>%
   arrange(desc(SENTRIXID)) %>%  # most recent first
